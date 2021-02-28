@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #wrapper {
+            padding: 50px;
+        }
+
+        img {
+            min-width: 20vw;
+            min-height: 300px;
+            display: block;
+            margin-bottom: 50px;
+            border: 1px solid;
+            width: 1px;
+        }
+    </style>
+</head>
+<body>
+<div id="wrapper">
+
+</div>
+</body>
+<script>
+    function initImage() {
+        let frag = document.createDocumentFragment();
+        for (let i = 0; i < 10; i++) {
+            let img = document.createElement('img');
+            img.classList.add('lazy-load');
+            img.dataset.src = `./imgs/${i}.jpg`;
+            frag.appendChild(img);
+        }
+        let wrapper = document.getElementById('wrapper');
+        wrapper.appendChild(frag);
+    }
+
+    initImage();
+</script>
+
+
+<script>
+    // 防抖函数
+    function debounce(fn, delay = 1000) {
+        let timer;
+        return function () {
+            window.clearTimeout(timer);
+            timer = setTimeout(() => {
+                fn.apply(this, arguments);
+                window.clearTimeout(timer);
+            }, delay);
+        }
+    }
+
+    // 节流函数
+    function throttle(fn, delay = 1000) {
+        // 节流开关
+        let run = true;
+        // 返回函数
+        return function () {
+            if (!run) {
+                return;
+            }
+            let timer = setTimeout(() => {
+                fn.apply(this, arguments);
+                window.clearTimeout(timer);
+                run = true;
+            }, delay);
+
+            run = false;
+        }
+    }
+</script>
+
+<script>
+    class LazyLoad {
+        constructor(el) {
+            // 懒加载img元素集合
+            this.imgs = document.querySelectorAll(el);
+            this.init();
+        }
+
+        // 初始化
+        init() {
+            // 是否兼容 IntersectionObserver
+            if ('IntersectionObserver' in window) {
+                this.lazyLoadByIntersectionObserver();
+            } else {
+                this.lazyLoadByScroll();
+            }
+        }
+
+        // 通过IntersectionObserver实现的懒加载
+        lazyLoadByIntersectionObserver() {
+            // 创建观察者
+            let iObserver = new IntersectionObserver((entries, observer) => {
+                /*
+                * 观察元素在可视范围内的回调
+                * */
+
+                entries.forEach(enter => {
+                    // 如过在可视范围内
+                    if (enter.isIntersecting) {
+                        // 获取观察的img元素
+                        let img = enter.target;
+
+                        img.src = img.dataset.src;
+                        img.classList.remove('lazy-load');
+
+                        // 停止观察
+                        iObserver.unobserve(img);
+                    }
+                });
+            });
+
+            this.imgs.forEach(img => {
+                // 将img元素添加观察
+                iObserver.observe(img);
+            });
+        }
+
+        // 滚动事件的懒加载
+        lazyLoadByScroll() {
+            // 节流函数返回的函数
+            let throttled = throttle(this.scrollFn);
+
+            // 监听滚动事件
+            window.addEventListener('scroll', throttled.bind(this));
+        }
+
+        scrollFn() {
+            // 浏览器可视范围高度
+            let clientH = document.documentElement.clientHeight;
+
+            this.imgs.forEach(img => {
+                // top：图片顶部到视口顶部距离；bottom：图片底部到视口顶部距离
+                let {top, bottom} = img.getBoundingClientRect();
+
+                // 判断img是否在可视范围内
+                if (top <= clientH && bottom >= 0) {
+                    img.src = img.dataset.src;
+                    img.classList.remove('lazy-load');
+                }
+            });
+        }
+    }
+
+    new LazyLoad('.lazy-load');
+</script>
+</html>
